@@ -1,0 +1,266 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": "message",
+        "additionalFields": {}
+      },
+      "id": "4fc9c5cf-e075-43dd-91db-91532810673e",
+      "name": "Telegram Trigger (PDF)",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1620,
+        -20
+      ],
+      "webhookId": "5ffd355e-f3d3-4b0c-9ad0-fb6ad9391b98"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "filename",
+              "value": "={{$binary.data.fileName || ($now.format('YYYYMMDD_HHmmss') + '.pdf')}}"
+            },
+            {
+              "name": "base",
+              "value": "={{($binary.data.fileName || ($now.format('YYYYMMDD_HHmmss') + '.pdf')).replace(/\\.pdf$/i,'')}}"
+            },
+            {
+              "name": "caption",
+              "value": "={{$json.caption || ''}}"
+            },
+            {
+              "name": "chatId",
+              "value": "={{$json.chatId}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5ccd9083-fb52-4198-bcee-bfefc2508c72",
+      "name": "Set filename/base/chatId",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1400,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "/ocr/in/{{ $json.filename }}",
+        "options": {}
+      },
+      "id": "e99aaf48-50d4-44b5-861c-8052a16c2299",
+      "name": "Write PDF to /ocr/in",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -1160,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "command": "TESSDATA_PREFIX=/usr/share/tessdata ocrmypdf --language tam+eng --rotate-pages --deskew --clean --sidecar /ocr/out/{{ $json.base }}.txt /ocr/in/{{ $json.filename }} /ocr/out/{{ $json.base }}_ocr.pdf"
+      },
+      "id": "e6c58260-af6b-465e-8c8a-9899b284429d",
+      "name": "Execute OCR",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.caption}}",
+              "operation": "contains",
+              "value2": "pdf"
+            }
+          ]
+        }
+      },
+      "id": "9efd7efd-7c18-4b48-be38-8bf192e10e25",
+      "name": "Caption wants PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        -20
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/ocr/out/{{ $json.base }}_ocr.pdf"
+      },
+      "id": "1334b80a-3961-4e2b-85ed-53b16ee13b7a",
+      "name": "Read OCR PDF",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chatId}}",
+        "text": "={{$json.ocr_text}}",
+        "additionalFields": {}
+      },
+      "id": "b1a863a5-14db-4dbf-b56b-fc1a604cee84",
+      "name": "Telegram → Send Message (Text)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        60,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chatId}}",
+        "additionalFields": {}
+      },
+      "id": "1a998e23-d728-44ac-9e87-b9249d499466",
+      "name": "Telegram → Send Document (PDF)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/ocr/out/{{ $json.base }}.txt"
+      },
+      "id": "037ab02e-1e8a-435e-8504-e6748dab0f92",
+      "name": "Read OCR Text",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a226cfef-3c64-44a3-8c63-7b2c988677c9",
+      "name": "Binary → JSON (text)",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger (PDF)": {
+      "main": [
+        [
+          {
+            "node": "Set filename/base/chatId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set filename/base/chatId": {
+      "main": [
+        [
+          {
+            "node": "Write PDF to /ocr/in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write PDF to /ocr/in": {
+      "main": [
+        [
+          {
+            "node": "Execute OCR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute OCR": {
+      "main": [
+        [
+          {
+            "node": "Caption wants PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Caption wants PDF?": {
+      "main": [
+        [
+          {
+            "node": "Read OCR PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Read OCR Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read OCR PDF": {
+      "main": [
+        [
+          {
+            "node": "Telegram → Send Document (PDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read OCR Text": {
+      "main": [
+        [
+          {
+            "node": "Binary → JSON (text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Binary → JSON (text)": {
+      "main": [
+        [
+          {
+            "node": "Telegram → Send Message (Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}
