@@ -1,0 +1,277 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "id": "eaec9f0b-242e-4fd1-9171-2d3f7348b302",
+      "name": "Telegram Trigger (PDF in)",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1780,
+        440
+      ],
+      "webhookId": "03424001-4c14-48a1-80b9-1124e0276fbf",
+      "credentials": {
+        "telegramApi": {
+          "id": "9vXhTEPvvAF9IVdu",
+          "name": "Srihari Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "caption",
+              "value": "={{$json.caption || $json.message?.caption || ''}}"
+            },
+            {
+              "name": "chatId",
+              "value": "={{$json.chatId || $json.message?.chat?.id}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1beda66b-1b22-444e-99a0-2ae6edbeeddf",
+      "name": "Set caption/chatId",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1340,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "={{ '/ocr/in/' + $binary.data.fileName }}",
+        "options": {
+          "append": false
+        }
+      },
+      "id": "48d14fd7-c72e-4bb0-a3e3-d64ec4700f61",
+      "name": "Write PDF to /ocr/in",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "command": "={{ \n(() => {\n  // Get original filename from Write node and sanitize it\n  const raw  = $item(0).$node[\"Write PDF to /ocr/in\"].binary.data.fileName || '';\n  const fn   = String(raw).replace(/\\r|\\n/g, '').trim();   // <<< IMPORTANT\n  const base = fn.replace(/\\.pdf$/i, '');\n\n  return `/bin/sh -lc '\nset -o pipefail\n\nIN=\"/ocr/in/${fn}\"\nTXT=\"/ocr/out/${base}.txt\"\nPDF=\"/ocr/out/${base}_ocr.pdf\"\nDOCX=\"/ocr/out/${base}.docx\"\n\n# 1) Fast text extraction\npdftotext -layout -enc UTF-8 \"$IN\" \"$TXT\" || true\n\n# 2) OCR only if no text was extracted; else reuse original PDF\nif [ ! -s \"$TXT\" ]; then\n  if ! TESSDATA_PREFIX=/usr/share/tessdata ocrmypdf -l tam+eng \\\n       --skip-text --rotate-pages --clean \\\n       --output-type pdf --optimize 1 --jobs 2 \\\n       --tesseract-timeout 120 \\\n       --sidecar \"$TXT\" \"$IN\" \"$PDF\"; then\n    echo \"[warn] ocrmypdf failed; copying original to PDF\"\n    cp \"$IN\" \"$PDF\"\n  fi\nelse\n  cp \"$IN\" \"$PDF\"\nfi\n\n# 3) Ensure we have text so pandoc can succeed\n[ -s \"$TXT\" ] || echo \" \" > \"$TXT\"\n\n# 4) Build DOCX; if pandoc errors, create minimal DOCX\nif ! pandoc \"$TXT\" -o \"$DOCX\"; then\n  printf \" \" | pandoc -o \"$DOCX\"\nfi\n\necho \"--- /ocr/out listing ---\"\nls -lQ /ocr/out\n'`;\n})()\n}}\n"
+      },
+      "id": "67c59da1-ab55-4185-8f7b-78c3c59b72e7",
+      "name": "Execute OCR → DOCX/PDF",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -860,
+        440
+      ],
+      "notesInFlow": false,
+      "retryOnFail": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "filePath": "={{ String($json.pdf_path  || '').replace(/\\r|\\n/g,'').trim() }}\n"
+      },
+      "id": "d2ffbed1-7c46-441b-a38b-96863c99c084",
+      "name": "Read OCR PDF",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        40,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{$item(0).$node[\"Set caption/chatId\"].json.chatId}}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "afbb558f-37c4-450e-9308-d43f675ef077",
+      "name": "Telegram → Send Document (PDF)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        320,
+        320
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "9vXhTEPvvAF9IVdu",
+          "name": "Srihari Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "filePath": "={{ String($json.docx_path || '').replace(/\\r|\\n/g,'').trim() }}\n"
+      },
+      "id": "3611e7e0-d165-4fb1-bbc9-ba53c22d42da",
+      "name": "Read Word (.docx)",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        60,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{$item(0).$node[\"Set caption/chatId\"].json.chatId}}\n",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "916024cb-3a3b-47a1-b702-ed24e18945e7",
+      "name": "Telegram → Send Document (DOCX)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        320,
+        560
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "9vXhTEPvvAF9IVdu",
+          "name": "Srihari Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e0f96dd2-d432-4422-a01b-99482e21dc3c",
+              "name": "base",
+              "value": "={{ $item(0).$node[\"Write PDF to /ocr/in\"].binary.data.fileName\n     .replace(/\\.pdf$/i,'')\n     .replace(/\\r|\\n/g,'')\n     .trim() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "c5666d20-284b-4af9-920e-9be841fb187f",
+              "name": "docx_path",
+              "value": "={{ ('/ocr/out/' +\n     $item(0).$node[\"Write PDF to /ocr/in\"].binary.data.fileName\n       .replace(/\\.pdf$/i,'')\n       .replace(/\\r|\\n/g,'')\n       .trim() +\n     '.docx')\n     .replace(/\\r|\\n/g,'')\n     .trim() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "88b52a9c-ba17-4f0e-88b6-d8399de9c912",
+              "name": "pdf_path",
+              "value": "={{ ('/ocr/out/' +\n     $item(0).$node[\"Write PDF to /ocr/in\"].binary.data.fileName\n       .replace(/\\.pdf$/i,'')\n       .replace(/\\r|\\n/g,'')\n       .trim() +\n     '_ocr.pdf')\n     .replace(/\\r|\\n/g,'')\n     .trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -640,
+        440
+      ],
+      "id": "d396cf80-637b-4310-8b2d-48cd15ed0f4e",
+      "name": "Edit Fields"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger (PDF in)": {
+      "main": [
+        [
+          {
+            "node": "Set caption/chatId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set caption/chatId": {
+      "main": [
+        [
+          {
+            "node": "Write PDF to /ocr/in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write PDF to /ocr/in": {
+      "main": [
+        [
+          {
+            "node": "Execute OCR → DOCX/PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute OCR → DOCX/PDF": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read OCR PDF": {
+      "main": [
+        [
+          {
+            "node": "Telegram → Send Document (PDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Word (.docx)": {
+      "main": [
+        [
+          {
+            "node": "Telegram → Send Document (DOCX)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Read Word (.docx)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read OCR PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}
