@@ -1,0 +1,160 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "cdfd9441-71d3-4f1a-945e-413d1baa8ca2",
+      "name": "Telegram Trigger1",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "eb02dcf9-3f95-4d0d-bf76-f2053fdb0693",
+      "credentials": {
+        "telegramApi": {
+          "id": "9vXhTEPvvAF9IVdu",
+          "name": "Srihari Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{$json[\"message\"][\"voice\"][\"file_id\"]}}"
+      },
+      "id": "36b15e95-389b-4f18-813d-5b58e6128eca",
+      "name": "Telegram: Download Voice1",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "webhookId": "f4dfe7b6-c6fc-4ff5-9611-e3c3a95a6a3a",
+      "credentials": {
+        "telegramApi": {
+          "id": "9vXhTEPvvAF9IVdu",
+          "name": "Srihari Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        400,
+        0
+      ],
+      "id": "a2ca8f60-d5e9-4897-a36c-7f142337b1ea",
+      "name": "Transcribe a recording1",
+      "credentials": {
+        "openAiApi": {
+          "id": "IPe2kFDheuwhEVDY",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "prompt": "=Create a high-resolution, ultra-realistic photograph of a stunning travel destination inspired by: {{$json[\"text\"]}}. \nCapture vibrant natural colors, realistic lighting, and fine details as seen in professional travel photography. \n\nIn the bottom-right corner, place a small but clearly legible brand logo reading exactly: “LIA Tours & Travels”. \nRender the logo as a clean, bold, modern sans-serif wordmark, centered on a subtle rectangular background for clarity. \nEnsure the text “LIA Tours & Travels” is typed exactly as shown, with correct spelling, sharp edges, and no distortion. \nMake it appear as a polished vector-based watermark graphic overlaid on the image, with high contrast against the background so it remains fully visible. \n\nStyle: cinematic composition, sharp focus, high dynamic range, realistic textures.\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        620,
+        0
+      ],
+      "id": "42047127-a4b9-4b0e-ba59-3cc0f4f73671",
+      "name": "Generate an image1",
+      "credentials": {
+        "openAiApi": {
+          "id": "IPe2kFDheuwhEVDY",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{$node[\"Telegram Trigger1\"].json[\"message\"][\"chat\"][\"id\"]}}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "id": "332b1ca2-67ba-4f9f-bd25-4f39a9e453e5",
+      "name": "Telegram Send Photo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        800,
+        0
+      ],
+      "webhookId": "5bedc1bc-15a9-45d8-a115-fecd3b6077e4",
+      "credentials": {
+        "telegramApi": {
+          "id": "9vXhTEPvvAF9IVdu",
+          "name": "Srihari Telegram"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Download Voice1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Download Voice1": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording1": {
+      "main": [
+        [
+          {
+            "node": "Generate an image1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image1": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}
