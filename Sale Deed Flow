@@ -1,0 +1,696 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1chhxucUsKWxtkRM29XEZQGJCDiVz9Dbt",
+          "mode": "id"
+        },
+        "event": "watchFolderUpdated"
+      },
+      "id": "c7f1270b-d2bb-46eb-a0f2-9db88bef7513",
+      "name": "Google Drive Trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "8oSpKqOzPkFZsrza",
+          "name": "Google Drive LAtest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "list"
+      },
+      "id": "8691fa01-40aa-49c6-9925-20c0cd6cea84",
+      "name": "List Folder Files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -300,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "feWAPIkAskrD6xjA",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Identify and categorize files based on filename patterns\nconst files = $input.all()[0].json.files;\n\nfunction identifyFileType(filename) {\n  const name = filename.toLowerCase();\n  if (name.includes('template') || name.includes('sample') || name.includes('format')) return 'template';\n  if (name.includes('seller') && (name.includes('deed') || name.includes('sale'))) return 'seller_deed';\n  if (name.includes('patta') || name.includes('title')) return 'patta';\n  if (name.includes('seller') && name.includes('aadhar')) return 'seller_aadhar';\n  if (name.includes('buyer') && name.includes('aadhar')) return 'buyer_aadhar';\n  if (name.includes('aadhar')) return files.filter(f => f.name.toLowerCase().includes('aadhar')).indexOf(files.find(f => f.name === filename)) === 0 ? 'seller_aadhar' : 'buyer_aadhar';\n  return 'unknown';\n}\n\nconst categorizedFiles = { template: null, seller_deed: null, patta: null, seller_aadhar: null, buyer_aadhar: null };\nfiles.forEach(file => { const type = identifyFileType(file.name); if (type !== 'unknown') categorizedFiles[type] = file.id; });\nconst missingFiles = Object.keys(categorizedFiles).filter(key => !categorizedFiles[key]);\nif (missingFiles.length > 0) throw new Error(`Missing files: ${missingFiles.join(', ')}. Please ensure your folder contains all 5 required documents with appropriate filenames.`);\nreturn [{ json: { template_file_id: categorizedFiles.template, seller_deed_id: categorizedFiles.seller_deed, patta_file_id: categorizedFiles.patta, seller_aadhar_id: categorizedFiles.seller_aadhar, buyer_aadhar_id: categorizedFiles.buyer_aadhar, total_files_found: files.length, file_mapping: categorizedFiles, all_files: files.map(f => ({ name: f.name, id: f.id, type: identifyFileType(f.name) })) } }];"
+      },
+      "id": "c0b1dd31-196d-4155-8c2a-1afacbea1f12",
+      "name": "Identify Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.template_file_id }}",
+        "options": {}
+      },
+      "id": "17bd73cf-bcd9-4850-b4ca-39220d5ca6a9",
+      "name": "Download Template",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        80,
+        -400
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "8oSpKqOzPkFZsrza",
+          "name": "Google Drive LAtest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.seller_deed_id }}",
+        "options": {}
+      },
+      "id": "50be857f-4101-409a-bf8c-7c90a5fa2bbf",
+      "name": "Download Seller Deed",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        80,
+        -220
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "8oSpKqOzPkFZsrza",
+          "name": "Google Drive LAtest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.patta_file_id }}",
+        "options": {}
+      },
+      "id": "d33e1a0a-401c-4c09-becc-d4845a024934",
+      "name": "Download Patta",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        80,
+        -40
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "8oSpKqOzPkFZsrza",
+          "name": "Google Drive LAtest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.seller_aadhar_id }}",
+        "options": {}
+      },
+      "id": "63d04fdd-efa9-4503-804b-6303c6cfec13",
+      "name": "Download Seller Aadhar",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        80,
+        160
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "8oSpKqOzPkFZsrza",
+          "name": "Google Drive LAtest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{ $json.buyer_aadhar_id }}",
+        "options": {}
+      },
+      "id": "7a646aab-2434-4f48-8bf4-5b055fabb28a",
+      "name": "Download Buyer Aadhar",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        60,
+        340
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "8oSpKqOzPkFZsrza",
+          "name": "Google Drive LAtest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyBTjLHqyDjp_b5r18G-ORRUaCHBQHnP2TM"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "0fb1b332-a09b-4714-a633-1e092a46c83e",
+      "name": "Analyze Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        -400
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zLafieXtXSvUAR0z",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyBTjLHqyDjp_b5r18G-ORRUaCHBQHnP2TM"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "a8b7cd27-c1d9-4148-9e60-ea23a78087ec",
+      "name": "Extract Seller Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        380,
+        -180
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zLafieXtXSvUAR0z",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyBTjLHqyDjp_b5r18G-ORRUaCHBQHnP2TM"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "5887733f-95b4-4d97-a3c8-01f98bbd3dc9",
+      "name": "Extract Property Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        360,
+        0
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zLafieXtXSvUAR0z",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyBTjLHqyDjp_b5r18G-ORRUaCHBQHnP2TM"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "94512058-8a02-45da-b8bf-d43db1d056e2",
+      "name": "Extract Seller Aadhar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        340,
+        200
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zLafieXtXSvUAR0z",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyBTjLHqyDjp_b5r18G-ORRUaCHBQHnP2TM"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "2dcd3099-a7d9-471a-91b8-0af79dbb451a",
+      "name": "Extract Buyer Aadhar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        320,
+        400
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zLafieXtXSvUAR0z",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process all Gemini responses and create structured data\nconst responses = $input.all();\n\nfunction parseGeminiResponse(response) {\n  try {\n    const content = response.json.candidates[0].content.parts[0].text;\n    const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\n    return jsonMatch ? JSON.parse(jsonMatch[0]) : { raw_text: content };\n  } catch (error) {\n    return { error: error.message };\n  }\n}\n\nconst templateAnalysis = parseGeminiResponse(responses[0]);\nconst sellerInfo = parseGeminiResponse(responses[1]);\nconst propertyInfo = parseGeminiResponse(responses[2]);\nconst sellerAadhar = parseGeminiResponse(responses[3]);\nconst buyerAadhar = parseGeminiResponse(responses[4]);\n\nconst extractedData = {\n  date: new Date().getDate(),\n  month: new Date().toLocaleString('default', { month: 'long' }),\n  year: new Date().getFullYear(),\n  \n  seller_name: sellerAadhar.name || sellerInfo.name || 'SELLER_NAME',\n  seller_father_name: sellerAadhar.father_name || sellerInfo.father_name || 'SELLER_FATHER',\n  seller_age: sellerAadhar.age || sellerInfo.age || 'SELLER_AGE',\n  seller_aadhaar: sellerAadhar.aadhaar_number || 'SELLER_AADHAAR',\n  seller_address: sellerAadhar.address || sellerInfo.address || 'SELLER_ADDRESS',\n  seller_pan: sellerInfo.pan_number || 'SELLER_PAN',\n  \n  buyer_name: buyerAadhar.name || 'BUYER_NAME',\n  buyer_father_name: buyerAadhar.father_name || 'BUYER_FATHER',\n  buyer_age: buyerAadhar.age || 'BUYER_AGE',\n  buyer_aadhaar: buyerAadhar.aadhaar_number || 'BUYER_AADHAAR',\n  buyer_address: buyerAadhar.address || 'BUYER_ADDRESS',\n  \n  property_survey_no: propertyInfo.survey_number || 'SURVEY_NO',\n  property_patta_no: propertyInfo.patta_number || 'PATTA_NO',\n  property_area: propertyInfo.area || 'PROPERTY_AREA',\n  property_district: propertyInfo.district || 'DISTRICT',\n  property_village: propertyInfo.village || 'VILLAGE',\n  \n  sale_amount: '10,80,000',\n  sale_amount_words: 'Ten Lakhs Eighty Thousand Only',\n  \n  processing_timestamp: new Date().toISOString(),\n  template_analysis: templateAnalysis\n};\n\nreturn [{ json: extractedData }];"
+      },
+      "id": "5691ceee-52e9-4718-aea3-b314528437f0",
+      "name": "Process Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "AIzaSyBTjLHqyDjp_b5r18G-ORRUaCHBQHnP2TM"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "3da2e75c-c2ee-4e43-a931-f0e1e785eac2",
+      "name": "Generate Sale Deed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        60
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "zLafieXtXSvUAR0z",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1qCzvl7wFOUCC9NVuvIddsI79NJupuvW3",
+        "title": "Sale_Deed_{{ $('Process Data').item.json.seller_name }}_to_{{ $('Process Data').item.json.buyer_name }}_{{ $('Process Data').item.json.date }}_{{ $('Process Data').item.json.month }}_{{ $('Process Data').item.json.year }}"
+      },
+      "id": "6ac93251-97f2-4c57-ad00-a8ed8ca2eeda",
+      "name": "Create Google Doc",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        60
+      ],
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "Qqw17PA0zu25Yc9D",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"status\": \"success\",\n  \"message\": \"Sale deed generated successfully from folder\",\n  \"document_id\": \"{{ $('Create Google Doc').item.json.documentId }}\",\n  \"document_url\": \"{{ $('Create Google Doc').item.json.documentUrl }}\",\n  \"seller\": \"{{ $('Process Data').item.json.seller_name }}\",\n  \"buyer\": \"{{ $('Process Data').item.json.buyer_name }}\",\n  \"processing_time\": \"{{ $('Process Data').item.json.processing_timestamp }}\"\n}",
+        "options": {}
+      },
+      "id": "86abfa68-f982-4eca-b9dc-f40ce734634c",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        60
+      ]
+    }
+  ],
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "List Folder Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Folder Files": {
+      "main": [
+        [
+          {
+            "node": "Identify Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identify Files": {
+      "main": [
+        [
+          {
+            "node": "Download Template",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download Seller Deed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download Patta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download Seller Aadhar",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download Buyer Aadhar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Template": {
+      "main": [
+        [
+          {
+            "node": "Analyze Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Seller Deed": {
+      "main": [
+        [
+          {
+            "node": "Extract Seller Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Patta": {
+      "main": [
+        [
+          {
+            "node": "Extract Property Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Seller Aadhar": {
+      "main": [
+        [
+          {
+            "node": "Extract Seller Aadhar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Buyer Aadhar": {
+      "main": [
+        [
+          {
+            "node": "Extract Buyer Aadhar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Template": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Seller Info": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Property Info": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Seller Aadhar": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Buyer Aadhar": {
+      "main": [
+        [
+          {
+            "node": "Process Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Sale Deed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Sale Deed": {
+      "main": [
+        [
+          {
+            "node": "Create Google Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Doc": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}
