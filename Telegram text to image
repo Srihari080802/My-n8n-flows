@@ -1,0 +1,29 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "file": "={{ $json.url }}",
+        "additionalFields": {}
+      },
+      "id": "3ef6022d-a883-4b1a-a6c0-a98c91c7a831",
+      "name": "Telegram Send Photo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        620,
+        0
+      ],
+      "webhookId": "5bedc1bc-15a9-45d8-a115-fecd3b6077e4",
+      "credentials": {
+        "telegramApi": {
+          "id": "MhRLXpwsRy0MOyfY",
+          "name": "vv bot"
+        }
+      }
+    }
+  ],
+  "connections": {},
+  "pinData": {}
+}
